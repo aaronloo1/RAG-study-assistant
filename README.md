@@ -5,7 +5,7 @@
 # Overview
 This project is a local AI study assistant that lets you ask questions about your own documents. You drop in your notes, textbooks, or worksheets, and it finds the most relevant sections and generates an answer using Google Gemini.
 
-The retrieval is done using vector embeddings — your documents are chunked, converted into numerical vectors, and stored in a local ChromaDB database. When you ask a question, it's embedded the same way and the closest matching chunks are retrieved and sent to Gemini to generate the answer.
+The retrieval is done using vector embeddings. Your documents are chunked, converted into numerical vectors, and stored in a local ChromaDB database. When you ask a question, it gets embedded the same way and the closest matching chunks are retrieved and sent to Gemini to generate the answer.
 
 
 ## Tech Stack
@@ -78,7 +78,7 @@ Type `quit`, `exit`, or `q` to stop.
 ## Supported File Types
 | Format | Notes |
 | :------| :-----|
-| `.pdf` | Text-based PDFs only — scanned/image PDFs are not supported |
+| `.pdf` | Text-based PDFs only. Scanned/image PDFs are not supported |
 | `.txt` | Plain text files |
 | `.md` | Markdown files |
 
@@ -93,7 +93,7 @@ The system is split into three files that each handle one part of the pipeline.
 | `src/ingest.py` | Reads files from `docs/`, chunks the text, embeds each chunk, and stores them in ChromaDB |
 | `src/query.py` | Embeds the user's question and retrieves the top 5 most similar chunks from ChromaDB |
 | `src/chat.py` | Builds a prompt from the retrieved chunks and sends it to Gemini to generate an answer |
-| `main.py` | Entry point — adds `src/` to the Python path and runs the chat loop |
+| `main.py` | Entry point that adds `src/` to the Python path and runs the chat loop |
 
 
 ## How the System Works
