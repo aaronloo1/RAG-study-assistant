@@ -6,21 +6,24 @@ warnings.filterwarnings("ignore", category=UserWarning)
 import chromadb
 from sentence_transformers import SentenceTransformer
 
+try:
+    import streamlit as st
+    _cache = st.cache_resource
+except ImportError:
+    def _cache(fn):
+        return fn
+
 DB_FOLDER = "chroma_db"
-TOP_K = 5
-
-_client = None
-_collection = None
-_model = None
+TOP_K = 8
+MIN_SCORE = 0.2
 
 
+@_cache
 def _get_resources():
-    global _client, _collection, _model
-    if _model is None:
-        _client = chromadb.PersistentClient(path=DB_FOLDER)
-        _collection = _client.get_or_create_collection(name="study_docs")
-        _model = SentenceTransformer("all-MiniLM-L6-v2")
-    return _collection, _model
+    client = chromadb.PersistentClient(path=DB_FOLDER)
+    collection = client.get_or_create_collection(name="study_docs")
+    model = SentenceTransformer("all-MiniLM-L6-v2")
+    return collection, model
 
 
 def query(question: str) -> list[dict]:
@@ -37,12 +40,19 @@ def query(question: str) -> list[dict]:
         results["metadatas"][0],
         results["distances"][0]
     ):
-        chunks.append({
-            "text": doc,
-            "source": meta["source"],
-            "score": round(1 - dist, 4)
-        })
+        score = round(1 - dist, 4)
+        if score >= MIN_SCORE:
+            chunks.append({"text": doc, "source": meta["source"], "score": score})
     return chunks
+
+
+def get_all_chunks(limit: int = 30) -> list[dict]:
+    collection, _ = _get_resources()
+    results = collection.get(limit=limit, include=["documents", "metadatas"])
+    return [
+        {"text": doc, "source": meta["source"]}
+        for doc, meta in zip(results["documents"], results["metadatas"])
+    ]
 
 
 if __name__ == "__main__":

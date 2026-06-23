@@ -22,7 +22,7 @@ def extract_text_from_txt(path):
     return f.read()
 
 
-def chunk_text(text, chunk_size=500, overlap=50):
+def chunk_text(text, chunk_size=150, overlap=20):
   words = text.split()
   chunks = []
   i = 0
@@ -33,7 +33,20 @@ def chunk_text(text, chunk_size=500, overlap=50):
   return chunks
 
 
+def delete_document(filename: str):
+  results = collection.get(where={"source": filename})
+  if results["ids"]:
+    collection.delete(ids=results["ids"])
+
+
+def is_already_ingested(filename):
+  results = collection.get(where={"source": filename}, limit=1)
+  return len(results["ids"]) > 0
+
+
 def ingest_documents():
+  summary = {"new": [], "updated": [], "skipped": []}
+
   for filename in os.listdir(DOCS_FOLDER):
     path = os.path.join(DOCS_FOLDER, filename)
 
@@ -45,8 +58,10 @@ def ingest_documents():
     elif filename.endswith(".txt") or filename.endswith(".md"):
       text = extract_text_from_txt(path)
     else:
-      print(f"Skipping unsupported file: {filename}")
+      summary["skipped"].append(filename)
       continue
+
+    already_exists = is_already_ingested(filename)
 
     chunks = chunk_text(text)
     embeddings = model.encode(chunks).tolist()
@@ -59,7 +74,12 @@ def ingest_documents():
           metadatas=[{"source": filename}]
       )
 
-    print(f"Ingested {len(chunks)} chunks from {filename}")
+    if already_exists:
+      summary["updated"].append(filename)
+    else:
+      summary["new"].append(filename)
+
+  return summary
 
 
 if __name__ == "__main__":
