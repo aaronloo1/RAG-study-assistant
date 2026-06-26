@@ -1,13 +1,15 @@
 import os
+import re
+import json
 import time
 from dotenv import load_dotenv
 from google import genai
-from query import query
+from query import query, get_chunks_for_document
 
 load_dotenv()
 client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 
-MODEL = "gemini-2.0-flash"
+MODEL = "gemini-1.5-flash"
 _MAX_RETRIES = 5
 _RETRY_DELAY = 5  # seconds between retries
 
@@ -100,6 +102,53 @@ def ask_with_sources(question: str, history: list[dict] | None = None) -> dict:
   chunks = query(question)
   prompt = build_prompt(question, chunks, history or [])
   return {"answer_stream": _generate_stream(prompt), "sources": chunks}
+
+
+def summarize_document(filename: str) -> str:
+  chunks = get_chunks_for_document(filename)
+  if not chunks:
+    return "No content found for this document. Make sure it has been ingested."
+  context = "\n\n".join(c["text"] for c in chunks)
+  prompt = (
+      f"Summarize the following document called '{filename}' in 3-5 clear bullet points. "
+      f"Focus on the key concepts and main ideas a student would need to know.\n\n{context}"
+  )
+  return _generate_with_retry(prompt)
+
+
+SESSIONS_FOLDER = "chat_sessions"
+
+
+def _safe_filename(name: str) -> str:
+  # Strip characters that are invalid in Windows/Mac/Linux filenames.
+  return re.sub(r'[<>:"/\\|?*]', '', name).strip()
+
+
+def list_sessions() -> list[str]:
+  if not os.path.exists(SESSIONS_FOLDER):
+    return []
+  return sorted(f[:-5] for f in os.listdir(SESSIONS_FOLDER) if f.endswith(".json"))
+
+
+def load_session(name: str) -> list[dict]:
+  path = os.path.join(SESSIONS_FOLDER, f"{_safe_filename(name)}.json")
+  if os.path.exists(path):
+    with open(path, "r", encoding="utf-8") as f:
+      return json.load(f)
+  return []
+
+
+def save_session(name: str, messages: list[dict]):
+  os.makedirs(SESSIONS_FOLDER, exist_ok=True)
+  path = os.path.join(SESSIONS_FOLDER, f"{_safe_filename(name)}.json")
+  with open(path, "w", encoding="utf-8") as f:
+    json.dump(messages, f, ensure_ascii=False, indent=2)
+
+
+def delete_session(name: str):
+  path = os.path.join(SESSIONS_FOLDER, f"{_safe_filename(name)}.json")
+  if os.path.exists(path):
+    os.remove(path)
 
 
 if __name__ == "__main__":

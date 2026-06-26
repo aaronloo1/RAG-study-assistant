@@ -101,17 +101,3 @@ The system is split into three files that each handle one part of the pipeline.
 2. `query.py` embeds the question the same way and calls `collection.query()` to find the 5 nearest chunks by vector distance
 3. `chat.py` formats those chunks into a prompt and calls the Gemini API, instructing it to only answer from the provided context
 4. `main.py` adds `src/` to `sys.path` so all imports resolve correctly when run from the project root
-
-
-## Project Structure
-```
-RAG-study-assistant/
-├── main.py              
-├── src/
-│   ├── ingest.py        
-│   ├── query.py         
-│   └── chat.py          
-├── docs/                # Your documents go here (gitignored)
-├── chroma_db/           # Auto-generated vector database (gitignored)
-└── .env                 # Your Gemini API key (gitignored)
-```

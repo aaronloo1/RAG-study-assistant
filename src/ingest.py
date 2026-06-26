@@ -1,7 +1,9 @@
 import os
+import re
 import chromadb
 from sentence_transformers import SentenceTransformer
 import fitz  # PyMuPDF
+import docx  # python-docx
 
 # --- Setup ---
 DOCS_FOLDER = "docs"
@@ -22,14 +24,34 @@ def extract_text_from_txt(path):
     return f.read()
 
 
-def chunk_text(text, chunk_size=150, overlap=20):
-  words = text.split()
+def extract_text_from_docx(path):
+  document = docx.Document(path)
+  return "\n".join(para.text for para in document.paragraphs)
+
+
+def _split_sentences(text: str) -> list[str]:
+  # Collapse 3+ newlines to a paragraph break, then split on sentence-ending
+  # punctuation OR paragraph breaks so chunks never cut mid-sentence.
+  text = re.sub(r'\n{3,}', '\n\n', text)
+  parts = re.split(r'(?<=[.!?])\s+|\n\n', text)
+  return [p.strip() for p in parts if p.strip()]
+
+
+def chunk_text(text, target_words=200, overlap_sentences=2):
+  sentences = _split_sentences(text)
+  if not sentences:
+    return []
   chunks = []
   i = 0
-  while i < len(words):
-    chunk = " ".join(words[i:i + chunk_size])
-    chunks.append(chunk)
-    i += chunk_size - overlap
+  while i < len(sentences):
+    group, word_count, j = [], 0, i
+    while j < len(sentences) and word_count < target_words:
+      group.append(sentences[j])
+      word_count += len(sentences[j].split())
+      j += 1
+    chunks.append(" ".join(group))
+    # Overlap: step forward but keep the last N sentences for the next chunk.
+    i = max(i + 1, j - overlap_sentences)
   return chunks
 
 
@@ -57,6 +79,8 @@ def ingest_documents():
       text = extract_text_from_pdf(path)
     elif filename.endswith(".txt") or filename.endswith(".md"):
       text = extract_text_from_txt(path)
+    elif filename.endswith(".docx"):
+      text = extract_text_from_docx(path)
     else:
       summary["skipped"].append(filename)
       continue

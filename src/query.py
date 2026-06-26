@@ -46,6 +46,15 @@ def query(question: str) -> list[dict]:
     return chunks
 
 
+def get_chunks_for_document(filename: str) -> list[dict]:
+    collection, _ = _get_resources()
+    results = collection.get(where={"source": filename}, include=["documents", "metadatas"])
+    return [
+        {"text": doc, "source": meta["source"]}
+        for doc, meta in zip(results["documents"], results["metadatas"])
+    ]
+
+
 def get_all_chunks(limit: int = 30) -> list[dict]:
     collection, _ = _get_resources()
     results = collection.get(limit=limit, include=["documents", "metadatas"])
