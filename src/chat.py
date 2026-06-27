@@ -5,11 +5,12 @@ import time
 from dotenv import load_dotenv
 from google import genai
 from query import query, get_chunks_for_document
+from storage import sync_up, delete_blob
 
 load_dotenv()
 client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 
-MODEL = "gemini-1.5-flash"
+MODEL = "gemini-2.0-flash"
 _MAX_RETRIES = 5
 _RETRY_DELAY = 5  # seconds between retries
 
@@ -140,15 +141,19 @@ def load_session(name: str) -> list[dict]:
 
 def save_session(name: str, messages: list[dict]):
   os.makedirs(SESSIONS_FOLDER, exist_ok=True)
-  path = os.path.join(SESSIONS_FOLDER, f"{_safe_filename(name)}.json")
+  safe = _safe_filename(name)
+  path = os.path.join(SESSIONS_FOLDER, f"{safe}.json")
   with open(path, "w", encoding="utf-8") as f:
     json.dump(messages, f, ensure_ascii=False, indent=2)
+  sync_up(SESSIONS_FOLDER, "chat_sessions")
 
 
 def delete_session(name: str):
-  path = os.path.join(SESSIONS_FOLDER, f"{_safe_filename(name)}.json")
+  safe = _safe_filename(name)
+  path = os.path.join(SESSIONS_FOLDER, f"{safe}.json")
   if os.path.exists(path):
     os.remove(path)
+  delete_blob(f"chat_sessions/{safe}.json")
 
 
 if __name__ == "__main__":

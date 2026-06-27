@@ -3,6 +3,11 @@ import os
 import html as html_lib
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
+# Must run before ingest is imported — ingest initialises ChromaDB at module level
+# and needs the chroma_db/ folder already populated from GCS.
+from storage import bootstrap_from_gcs  # noqa
+bootstrap_from_gcs()
+
 import streamlit as st  # noqa
 from ingest import ingest_documents, delete_document, DOCS_FOLDER  # noqa
 from chat import (  # noqa

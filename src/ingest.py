@@ -4,6 +4,7 @@ import chromadb
 from sentence_transformers import SentenceTransformer
 import fitz  # PyMuPDF
 import docx  # python-docx
+from storage import sync_up, delete_blob
 
 # --- Setup ---
 DOCS_FOLDER = "docs"
@@ -59,6 +60,8 @@ def delete_document(filename: str):
   results = collection.get(where={"source": filename})
   if results["ids"]:
     collection.delete(ids=results["ids"])
+  delete_blob(f"docs/{filename}")
+  sync_up(DB_FOLDER, "chroma_db")
 
 
 def is_already_ingested(filename):
@@ -103,6 +106,8 @@ def ingest_documents():
     else:
       summary["new"].append(filename)
 
+  sync_up(DOCS_FOLDER, "docs")
+  sync_up(DB_FOLDER, "chroma_db")
   return summary
 
 
