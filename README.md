@@ -114,15 +114,3 @@ The system is split into modules that each handle one part of the pipeline.
 3. `chat.py` formats those chunks into a prompt (with source labels and relevance scores) and calls the Gemini API, instructing it to cite sources inline and distinguish document knowledge from general knowledge
 4. `storage.py` syncs all data to GCS on every ingest, delete, or session save — and pulls it all back down on startup so the app picks up where it left off after a restart
 5. `app.py` runs the Streamlit frontend, bootstrapping from GCS before ChromaDB is initialized
-
-
-## Docker
-A `Dockerfile` is included for containerized deployment. It bakes the `all-MiniLM-L6-v2` embedding model into the image at build time so cold starts don't download ~90 MB from HuggingFace.
-
-```bash
-docker build -t rag-study-assistant .
-docker run -p 8501:8501 \
-  -e GEMINI_API_KEY=your_key \
-  -e GCS_BUCKET_NAME=your_bucket \
-  rag-study-assistant
-```
